@@ -4,6 +4,7 @@
 # Installs tdar
 #
 # Installs prereqs (tdar and jq)
+	clear
 	echo "Installing Prerequisites"
 	sleep 1
 	echo "Installing jq"
