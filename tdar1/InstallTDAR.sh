@@ -15,8 +15,8 @@
 	sleep 1
 	echo "Instaling tadar"
 	sleep 1
-	wget tdar23 https://raw.githubusercontent.com/hydrajake/tdar/refs/heads/main/tdar1/tdar23
-	wget updar https://raw.githubusercontent.com/hydrajake/tdar/refs/heads/main/tdar1/updar
+	wget https://raw.githubusercontent.com/hydrajake/tdar/refs/heads/main/tdar1/tdar23
+	wget https://raw.githubusercontent.com/hydrajake/tdar/refs/heads/main/tdar1/updar
 # Makes tdar executable and moves it to /bin
 	sleep 1
 	echo "Finishing up..."
