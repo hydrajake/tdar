@@ -1,1 +1,9 @@
-
+#!/bin/bash
+#
+# Placeholder text
+# Command will read README file for version number of script.
+# Command will compare it to new README file it pulls from the repository.
+# Command will download new version of tdar and install it if it's needing an update.
+# Command can be ran manually or scheduled to run.
+#
+# End of file
