@@ -2,7 +2,9 @@
 #
 # tdar (Total DAR)
 # Installs tdar
-#
+# Creates tdar directory
+	mkdir tdar
+	cd tdar
 # Installs prereqs (tdar and jq)
 	clear
 	echo "Installing Prerequisites"
@@ -14,12 +16,14 @@
 	echo "Instaling tadar"
 	sleep 1
 	wget tdar23 https://raw.githubusercontent.com/hydrajake/tdar/refs/heads/main/tdar1/tdar23
-	wget updateDAR.sh https://raw.githubusercontent.com/hydrajake/tdar/refs/heads/main/tdar1/updateDAR.sh
+	wget updar https://raw.githubusercontent.com/hydrajake/tdar/refs/heads/main/tdar1/updar
 # Makes tdar executable and moves it to /bin
 	sleep 1
 	echo "Finishing up..."
 	sudo chmod +x tdar23
-	sudo mv tdar23 /bin/tdar
+	sudo chmod +x updar
+	sudo cp tdar23 /bin/tdar
+	sudo cp updar /bin/updar
 	clear
 	echo "tdar installed!"
 	sleep 1
