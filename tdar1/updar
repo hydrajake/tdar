@@ -1,9 +1,35 @@
 #!/bin/bash
+# Checks for updates to tdar
 #
-# Placeholder text
-# Command will read README file for version number of script.
-# Command will compare it to new README file it pulls from the repository.
-# Command will download new version of tdar and install it if it's needing an update.
-# Command can be ran manually or scheduled to run.
-#
-# End of file
+# Change to tadr directory
+        clear
+        cd ~/tdar || { echo "tdar directory not found."; exit 1; }
+# Extract version number from local README
+        echo "Reading local version..."
+        sleep 1
+        oldVersion=$(awk '/# Current version/{getline; if ($0 ~ /^# v[0-9]/) {sub(/^# v/, "", $0); print $0}}' "README")
+        echo "Version of tdar on device: $oldVersion"
+# Download latest README from repository
+        echo "Checking for update..."
+        wget -q https://raw.githubusercontent.com/hydrajake/tdar/refs/heads/main/tdar1/README -O Check
+# Extract version number from downloaded README
+        newVersion=$(awk '/# Current version/{getline; if ($0 ~ /^# v[0-9]/) {sub(/^# v/, "", $0); print $0}}' "Check")
+        echo "Latest version of tdar: $newVersion"
+# Compare versions
+        if (( $(echo "$newVersion > $oldVersion" | bc -l) )); then
+                echo "Update available ($oldVersion -> $newVersion)"
+                cp tdar23 old/"tdar23[old-$oldVersion]"
+                rm tdar23
+                rm /bin/tdar
+                wget https://raw.githubusercontent.com/hydrajake/tdar/refs/heads/main/tdar1/tdar23
+                chmod +x tdar23
+                cp tdar23 /bin/tdar
+                rm README
+                mv Check README
+        elif (( $(echo "$newVersion < $oldVersion" | bc -l) )); then
+                echo "Local version ($oldVersion) is newer than repository version ($newVersion)"
+                rm -f Check
+        else
+                echo "tdar is up to date."
+                rm -f Check
+        fi
