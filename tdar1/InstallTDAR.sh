@@ -3,8 +3,10 @@
 # tdar (Total DAR)
 # Installs tdar
 # Creates tdar directory
+	cd
 	mkdir tdar
 	cd tdar
+	mkdir old
 # Installs prereqs (tdar and jq)
 	clear
 	echo "Installing Prerequisites"
