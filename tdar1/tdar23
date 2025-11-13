@@ -1,18 +1,20 @@
 #!/bin/bash
 # tdar
-# Version 2.6
+# Version 2.7
 # Updated 11/13/2025
 # Totals numeric or time-based fields by date
-# Usage: tdar <file_name> <field_name> <date>
-# Written br J.Mock and M.Seifert
+# Usage: tdar <file_name> [fieldname] [date]
+# Written by J.Mock and M.Seifert
 #
-# Declare
-	json_file="$1"
-	arg2="$2"
-	arg3="$3"
-	fieldname=""
-	target_date=""
-#
+
+# --- Declare ---
+json_file="$1"
+arg2="$2"
+arg3="$3"
+fieldname=""
+target_date=""
+
+# --- Input validation ---
 if [ $# -lt 1 ] || [ $# -gt 3 ]; then
     echo "Usage: $0 <json_file> [fieldname] [date]"
     echo "Examples:"
@@ -20,20 +22,21 @@ if [ $# -lt 1 ] || [ $# -gt 3 ]; then
     echo "  $0 LIVE-DAR.json TotalSales"
     echo "  $0 LIVE-DAR.json 10-22-2025"
     echo "  $0 LIVE-DAR.json TotalSales 10-22-2025"
+    echo "  $0 LIVE-DAR.json 10-22-2025 TotalSales"
     exit 1
 fi
-#
+
 if ! command -v jq >/dev/null 2>&1; then
     echo "Error: jq is not installed. Please install it (e.g. sudo apt install jq)."
     exit 1
 fi
-#
-# Optional features to make running this a bit more fun
-	echo "Reading file..."
-	sleep 1
-	echo "Totaling data..."
-	sleep 1
-#
+
+# --- Fun CLI feedback ---
+echo "Reading file..."
+sleep 1
+echo "Totaling data..."
+sleep 1
+
 # --- Helpers ---
 time_to_minutes() {
     local time_str="$1"
@@ -44,14 +47,21 @@ time_to_minutes() {
     minutes=$((10#$minutes))
     echo $((hours * 60 + minutes))
 }
-#
+
 minutes_to_time() {
     local total_minutes="$1"
     local hours=$((total_minutes / 60))
     local minutes=$((total_minutes % 60))
     printf "%d:%02d" "$hours" "$minutes"
 }
-#
+
+normalize_date() {
+    local date_input="$1"
+    # Replace . and / with -
+    local normalized=$(echo "$date_input" | sed 's/[./]/-/g')
+    echo "$normalized"
+}
+
 # --- Field lists ---
 numeric_fields=(
     "TotalSales"
@@ -62,7 +72,7 @@ numeric_fields=(
     "ProjectedSandwichCount"
     "CrewActualPunchedDollars"
 )
-#
+
 time_fields=(
     "ActualPunchedHours"
     "SalariedManagerScheduledHours"
@@ -78,26 +88,25 @@ time_fields=(
     "VLHNeededHours"
     "FloorMgmtNeededHours"
 )
-#
-# --- Detect whether arg2 is a field or a date ---
-if [[ "$arg2" =~ ^[0-9]{2}-[0-9]{2}-[0-9]{4}$ ]]; then
-    target_date="$arg2"
-elif [[ -n "$arg2" ]]; then
-    fieldname="$arg2"
-fi
-#
-if [[ "$arg3" =~ ^[0-9]{2}-[0-9]{2}-[0-9]{4}$ ]]; then
-    target_date="$arg3"
-fi
-#
+
+# --- Determine which arg is date vs field ---
+for arg in "$arg2" "$arg3"; do
+    [[ -z "$arg" ]] && continue
+    normalized_arg=$(normalize_date "$arg")
+    if [[ "$normalized_arg" =~ ^[0-9]{2}-[0-9]{2}-[0-9]{4}$ ]]; then
+        target_date="$normalized_arg"
+    else
+        fieldname="$arg"
+    fi
+done
+
 # --- Select fields to process ---
-fields_to_process=()
 if [ -n "$fieldname" ]; then
     fields_to_process=("$fieldname")
 else
     fields_to_process=("${numeric_fields[@]}" "${time_fields[@]}")
 fi
-#
+
 # --- Select dates ---
 if [ -n "$target_date" ]; then
     dates="$target_date"
@@ -110,7 +119,6 @@ while IFS= read -r date; do
     echo "---- Date: $date ----"
 
     for field in "${fields_to_process[@]}"; do
-        # check if it's numeric or time
         if [[ " ${numeric_fields[*]} " == *" $field "* ]]; then
             total=$(jq -r --arg date "$date" --arg field "$field" '
                 .[] | select(.Date == $date) | .QuarterHourEndTime |
@@ -127,13 +135,12 @@ while IFS= read -r date; do
                 .[] | select(.Date == $date) | .QuarterHourEndTime |
                 to_entries[] | .value[$field]
             ' "$json_file")
-
             total_time=$(minutes_to_time "$total_minutes")
             echo "$field: $total_time"
         else
             echo "$field: (unknown field)"
         fi
     done
-
     echo ""
 done <<< "$dates"
+
