@@ -1,9 +1,9 @@
 # Current version
-# v3.0
+# v3.1
 # 11/13/2025
 # 
-# Format: tdar [-b, -s, or -p] <file_name> [field_name] [date]
-# The -b (by-line), -s (skip), and -p (print-out) flags, along with field_name and date, are optional.
+# Format: tdar [-s, or -p] <file_name> [field_name] [date]
+# The -s (skip), and -p (print-out) flags, along with field_name and date, are optional.
 # file_name is required.
 # file_name must be entered in its entirety.
 # file_name MUST be the first argument or immediately follow any flags used.
@@ -19,11 +19,6 @@
 # FLAG OPTIONS
 # --------------------------------------------
 #
-# Use the "-b" flag to list each date entry one by one.
-# The script will pause after each entry until Enter is pressed.
-# Example:
-#	tdar -b <file_name> [field_name] [date]
-#
 # Use the "-s" flag to skip the detailed per-date listing and only display the complete totals of the file.
 # Example:
 #	tdar -s <file_name> [field_name] [date]
@@ -37,7 +32,6 @@
 #	"Results for <store_number> [field_name] [date].txt"
 #
 # The -s and -p flags can be used together.
-# The -b flag can only be used alone.
 #
 # --------------------------------------------
 # EXAMPLES
@@ -46,6 +40,6 @@
 #	tdar testDAR.json
 #	tdar testDAR.json TotalSales 10-20-2025
 #	tdar testDAR.json 10-20-2025
-#	tdar -b testDAR.json
 #	tdar -s testDAR.json TotalSales
 #	tdar -p testDAR.json TotalSales 10-20-2025
+# tdar -p  -s testDAR.json TotalSales 10-20-2025
