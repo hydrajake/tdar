@@ -1,16 +1,10 @@
 #!/bin/bash
 # tdar
-# Version 2.5
-# Updated 11/11/2025
+# Version 2.6
+# Updated 11/13/2025
 # Totals numeric or time-based fields by date
 # Usage: tdar <file_name> <field_name> <date>
 # Written br J.Mock and M.Seifert
-#
-# Optional commands to make running this fun
-	echo "Reading file..."
-	sleep 1
-	echo "Totaling data..."
-	sleep 1
 #
 # Declare
 	json_file="$1"
@@ -33,7 +27,13 @@ if ! command -v jq >/dev/null 2>&1; then
     echo "Error: jq is not installed. Please install it (e.g. sudo apt install jq)."
     exit 1
 fi
-
+#
+# Optional features to make running this a bit more fun
+	echo "Reading file..."
+	sleep 1
+	echo "Totaling data..."
+	sleep 1
+#
 # --- Helpers ---
 time_to_minutes() {
     local time_str="$1"
