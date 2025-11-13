@@ -2,16 +2,31 @@
 # v2.8
 # 11/13/2025
 # 
-# How to Use
-# tdar <file_name> [feild_name] [date]
-# feild_name and date are optional.
-# file_name is required.
-# date MUST be in the mm-dd-yyyy format. Do not use slashes or periods.
-# If used, feild_name MUST be the second srgument and not the third.
-# However, date can be the second argument if feild_name is not used.
+# To use tdar, a time-dar.json file must be present on your Ubuntu machine.
+# Copy the JSON file you want to examine to the root directory of your Ubuntu machine.
+# Open your Ubuntu terminal and ensure you are in the root directory.
+# 
+# Execute tdar using the following format:
+# 	tdar [-b or -s] <file_name> [field_name] [date]
+# 
+# Options and arguments:
+# 	-b : Break mode. Lists each date entry one by one. Press Enter to continue through dates.
+# 	-s : Summary mode. Skips the full listing and generates the complete totals for the file.
+# 	<file_name> : Required. Must be entered in full. Should be the first argument or immediately follow -b if used.
+# 	[field_name] : Optional. Specify a single field to total.
+# 	[date] : Optional. Must be in mm-dd-yyyy format (use dashes only, no slashes or periods).
+# 
+# Notes:
+# 	field_name and date can be interchangeable in order if only one is provided.
+# 	If both field_name and date are provided, order does not matter.
+# 
 # Examples:
-#	tdar testDAR.json 
-#	tdar testDAR.json TotalSales 10-20-2025
-#	tdar testDAR.json 10-20-2025
-#	
-#
+# 	tdar testDAR.json
+# 	tdar testDAR.json TotalSales 10-20-2025
+# 	tdar testDAR.json 10-20-2025
+# 	tdar -b testDAR.json
+# 	tdar -s testDAR.json TotalSales
+# 
+# Additional tips:
+# 	- Use -b to read the data one day at a time, avoiding long scrolls.
+# 	- Use -s to skip the full listing and see only grand totals.
