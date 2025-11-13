@@ -2,28 +2,50 @@
 # v2.9
 # 11/13/2025
 # 
-# To use tdar, a time-dar.json file must be present on your Ubuntu machine.
-# Copy the JSON file you want to examine to the root directory of your Ubuntu machine.
-# Open your Ubuntu terminal and ensure you are in the root directory.
-# 
-# Execute tdar using the following format:
-# 	tdar [-b or -s] <file_name> [field_name] [date]
-# 
-# Options and arguments:
-# 	-b : Break mode. Lists each date entry one by one. Press Enter to continue through dates.
-# 	-s : Summary mode. Skips the full listing and generates the complete totals for the file.
-# 	<file_name> : Required. Must be entered in full. Should be the first argument or immediately follow -b if used.
-# 	[field_name] : Optional. Specify a single field to total.
-# 	[date] : Optional. Must be in mm-dd-yyyy format (use dashes only, no slashes or periods).
-# 
-# Notes:
-# 	field_name and date can be interchangeable in order if only one is provided.
-# 	If both field_name and date are provided, order does not matter.
-# 
-# Examples:
-# 	tdar testDAR.json
-# 	tdar testDAR.json TotalSales 10-20-2025
-# 	tdar testDAR.json 10-20-2025
-# 	tdar -b testDAR.json
-# 	tdar -s testDAR.json TotalSales
-# 
+# Format: tdar [-b, -s, or -p] <file_name> [field_name] [date]
+# The -b (by-line), -s (skip), and -p (print-out) options, along with field_name and date, are optional.
+# file_name is required.
+# file_name must be entered in its entirety.
+# file_name MUST be the first argument or immediately follow the -b option if used.
+# Date MUST be in the mmddyyyy format.
+#
+# Users can use periods, slashes, or dashes to separate the month, day, and year, as long as it maintains the mmddyyyy structure.
+# Valid date examples:
+# 11.13.2025
+# 11-13-2025
+# 11/13/2025
+#
+# --------------------------------------------
+# FLAG OPTIONS
+# --------------------------------------------
+#
+# Use the "-b" flag to list each date entry one by one.
+# The script will pause after each entry until Enter is pressed.
+# Example:
+#	tdar -b <file_name> [field_name] [date]
+#
+# Use the "-s" flag to skip the detailed per-date listing and only display the complete totals of the file.
+# Example:
+#	tdar -s <file_name> [field_name] [date]
+#
+# Use the "-p" flag to print the results of the command into a text file.
+# Example:
+#	tdar -p <file_name> [field_name] [date]
+#
+# When using the "-p" flag, the script will prompt for a store number.
+# The created file will be named:
+#	"Results for <store_number> [field_name] [date].txt"
+#
+# The -s and -p flags can be used together.
+# The -b flag can only be used alone.
+#
+# --------------------------------------------
+# EXAMPLES
+# --------------------------------------------
+#
+#	tdar testDAR.json
+#	tdar testDAR.json TotalSales 10-20-2025
+#	tdar testDAR.json 10-20-2025
+#	tdar -b testDAR.json
+#	tdar -s testDAR.json TotalSales
+#	tdar -p testDAR.json TotalSales 10-20-2025
