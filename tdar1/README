@@ -27,6 +27,3 @@
 # 	tdar -b testDAR.json
 # 	tdar -s testDAR.json TotalSales
 # 
-# Additional tips:
-# 	- Use -b to read the data one day at a time, avoiding long scrolls.
-# 	- Use -s to skip the full listing and see only grand totals.
