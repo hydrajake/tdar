@@ -1,40 +1,34 @@
 #!/bin/bash
 # tdar
-# Version 2.8
+# Version 2.9
 # Updated 11/13/2025
-# Totals numeric or time-based fields by date with break mode, summary mode, and grand totals
-# Usage: tdar [-b] [-s] <file_name> [fieldname] [date]
+# Totals numeric or time-based fields by date, with break, summary, and print-to-file options
+# Usage: tdar [-b | -s | -p] <file_name> [field_name] [date]
 # Written by J.Mock and M.Seifert
-#
 
-# --- Parse flags ---
+# --- Initialize flags ---
 break_mode=false
 summary_mode=false
+print_mode=false
 
+# --- Parse flags ---
 while [[ "$1" == -* ]]; do
     case "$1" in
         -b) break_mode=true ;;
         -s) summary_mode=true ;;
+        -p) print_mode=true ;;
         *) echo "Unknown option $1"; exit 1 ;;
     esac
     shift
 done
 
-# --- Declarations ---
+# --- Arguments ---
 json_file="$1"
 arg2="$2"
 arg3="$3"
-fieldname=""
-target_date=""
 
 if [ -z "$json_file" ]; then
-    echo "Usage: $0 [-b] [-s] <json_file> [fieldname] [date]"
-    echo "Examples:"
-    echo "  $0 LIVE-DAR.json"
-    echo "  $0 LIVE-DAR.json TotalSales"
-    echo "  $0 LIVE-DAR.json 10-22-2025"
-    echo "  $0 -b LIVE-DAR.json TotalSales 10-22-2025"
-    echo "  $0 -s LIVE-DAR.json"
+    echo "Usage: $0 [-b | -s | -p] <file_name> [field_name] [date]"
     exit 1
 fi
 
@@ -42,12 +36,6 @@ if ! command -v jq >/dev/null 2>&1; then
     echo "Error: jq is not installed. Please install it (e.g. sudo apt install jq)."
     exit 1
 fi
-
-# --- Optional cosmetic loading ---
-echo "Reading file..."
-sleep 1
-echo "Totaling data..."
-sleep 1
 
 # --- Helpers ---
 time_to_minutes() {
@@ -68,8 +56,7 @@ minutes_to_time() {
 }
 
 normalize_date() {
-    local date_input="$1"
-    echo "$date_input" | sed 's/[./]/-/g'
+    echo "$1" | sed 's/[./]/-/g'
 }
 
 # --- Field lists ---
@@ -99,7 +86,9 @@ time_fields=(
     "FloorMgmtNeededHours"
 )
 
-# --- Determine which arg is date vs field ---
+# --- Determine field and date ---
+fieldname=""
+target_date=""
 for arg in "$arg2" "$arg3"; do
     [[ -z "$arg" ]] && continue
     normalized_arg=$(normalize_date "$arg")
@@ -110,36 +99,43 @@ for arg in "$arg2" "$arg3"; do
     fi
 done
 
-# --- Select fields to process ---
+# --- Prepare fields to process ---
+fields_to_process=()
 if [ -n "$fieldname" ]; then
     fields_to_process=("$fieldname")
 else
     fields_to_process=("${numeric_fields[@]}" "${time_fields[@]}")
 fi
 
-# --- Read dates into an array ---
+# --- Collect all dates ---
 if [ -n "$target_date" ]; then
     date_array=("$target_date")
 else
     mapfile -t date_array < <(jq -r '.[].Date' "$json_file")
 fi
 
-# --- Main loop (only if not summary mode) ---
+# --- Prepare output file if -p ---
+if [ "$print_mode" = true ]; then
+    read -rp "Enter Store Number: " store_number
+    output_file="Results for ${store_number}"
+    [ -n "$fieldname" ] && output_file+=" ${fieldname}"
+    [ -n "$target_date" ] && output_file+=" ${target_date}"
+    output_file+=".txt"
+fi
+
+# --- Start output collection ---
+output="Reading file...\nTotaling data...\n"
+
+# --- Main per-date loop ---
 if [ "$summary_mode" = false ]; then
     for date in "${date_array[@]}"; do
-        [[ -z "$date" ]] && continue
-        echo "---- Date: $date ----"
-
+        output+="---- Date: $date ----\n"
         for field in "${fields_to_process[@]}"; do
-            # Numeric field
             if [[ " ${numeric_fields[*]} " == *" $field "* ]]; then
                 total=$(jq -r --arg date "$date" --arg field "$field" '
-                    .[] | select(.Date == $date) | .QuarterHourEndTime |
-                    to_entries[] | .value[$field] | tonumber
+                    .[] | select(.Date == $date) | .QuarterHourEndTime | to_entries[] | .value[$field] | tonumber
                 ' "$json_file" | jq -s 'add // 0')
-                printf "%s: %.2f\n" "$field" "$total"
-
-            # Time field
+                output+="$field: $(printf "%.2f" "$total")\n"
             elif [[ " ${time_fields[*]} " == *" $field "* ]]; then
                 total_minutes=0
                 while IFS= read -r time_str; do
@@ -147,33 +143,28 @@ if [ "$summary_mode" = false ]; then
                     mins=$(time_to_minutes "$time_str")
                     total_minutes=$((total_minutes + mins))
                 done < <(jq -r --arg date "$date" --arg field "$field" '
-                    .[] | select(.Date == $date) | .QuarterHourEndTime |
-                    to_entries[] | .value[$field]
+                    .[] | select(.Date == $date) | .QuarterHourEndTime | to_entries[] | .value[$field]
                 ' "$json_file")
                 total_time=$(minutes_to_time "$total_minutes")
-                echo "$field: $total_time"
+                output+="$field: $total_time\n"
             else
-                echo "$field: (unknown field)"
+                output+="$field: (unknown field)\n"
             fi
         done
+        output+="\n"
 
-        # --- BREAK MODE PAUSE ---
+        # --- Break mode ---
         if [ "$break_mode" = true ]; then
             read -rp "Press Enter to continue, or q to quit: " input < /dev/tty
-            if [[ "$input" =~ ^[Qq]$ ]]; then
-                echo "Exiting break mode."
-                exit 0
-            fi
+            [[ "$input" =~ ^[Qq]$ ]] && exit 0
         fi
-
-        echo ""
     done
 fi
 
 # --- GRAND TOTALS ---
-# Only skip if a specific date was provided AND summary mode is not used
-if [ "$summary_mode" = true ] || [ -z "$target_date" ]; then
-    echo "==== GRAND TOTALS ===="
+# Only if summary mode, or print mode with no date
+if [ "$summary_mode" = true ] || ([ "$print_mode" = true ] && [ -z "$target_date" ]); then
+    output+="==== GRAND TOTALS ====\n"
     for field in "${fields_to_process[@]}"; do
         if [[ " ${numeric_fields[*]} " == *" $field "* ]]; then
             if [ -n "$target_date" ]; then
@@ -185,8 +176,7 @@ if [ "$summary_mode" = true ] || [ -z "$target_date" ]; then
                     .[] | .QuarterHourEndTime | to_entries[] | .value[$field] | tonumber
                 ' "$json_file" | jq -s 'add // 0')
             fi
-            printf "%s: %.2f\n" "$field" "$total"
-
+            output+="$field: $(printf "%.2f" "$total")\n"
         elif [[ " ${time_fields[*]} " == *" $field "* ]]; then
             total_minutes=0
             if [ -n "$target_date" ]; then
@@ -207,8 +197,16 @@ if [ "$summary_mode" = true ] || [ -z "$target_date" ]; then
                 ' "$json_file")
             fi
             total_time=$(minutes_to_time "$total_minutes")
-            echo "$field: $total_time"
+            output+="$field: $total_time\n"
         fi
     done
 fi
 
+# --- Print or save output ---
+if [ "$print_mode" = true ]; then
+    echo "File Created, press any key to continue..."
+    echo -e "$output" > "$output_file"
+    read -n1 -s
+else
+    echo -e "$output"
+fi
