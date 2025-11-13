@@ -1,21 +1,19 @@
 #!/bin/bash
 # tdar
-# Version 3.0
+# Version 3.1
 # Updated 11/13/2025
 # Totals numeric or time-based fields by date
-# Usage: tdar [-b] [-s] [-p] <file_name> [field_name] [date]
+# Usage: tdar [-s] [-p] <file_name> [field_name] [date]
 # Written by J.Mock and M.Seifert
 
 # -----------------------------
 # Flags
 # -----------------------------
-breakmode=false
 skipmode=false
 printmode=false
 
 while [[ "$1" == -* ]]; do
     case "$1" in
-        -b) breakmode=true ;;
         -s) skipmode=true ;;
         -p) printmode=true ;;
         *) echo "Unknown option: $1"; exit 1 ;;
@@ -58,7 +56,7 @@ normalize_date() {
     fi
 }
 
-# Field/date decision
+# Decide which argument is date or field
 if [[ -n "$arg2" ]]; then
     nd=$(normalize_date "$arg2")
     if [[ -n "$nd" ]]; then
@@ -141,14 +139,6 @@ minutes_to_time() {
 output="Reading file...\nTotaling data...\n\n"
 
 # -----------------------------
-# -b intro prompt
-# -----------------------------
-if $breakmode; then
-    echo "Press Enter to begin..."
-    read -r _ </dev/tty
-fi
-
-# -----------------------------
 # MAIN LOGIC
 # -----------------------------
 process_date() {
@@ -156,6 +146,7 @@ process_date() {
     local block="---- Date: $date ----\n"
 
     for field in "${fields_to_process[@]}"; do
+
         # numeric fields
         if [[ " ${numeric_fields[*]} " == *" $field "* ]]; then
             total=$(jq -r --arg d "$date" --arg f "$field" '
@@ -164,6 +155,7 @@ process_date() {
                 | to_entries[]
                 | .value[$f]
             ' "$json_file" | jq -s 'add // 0')
+
             total=$(printf "%.2f" "$total")
             block+="$field: $total\n"
 
@@ -179,6 +171,7 @@ process_date() {
                 | to_entries[]
                 | .value[$f]
             ' "$json_file")
+
             block+="$field: $(minutes_to_time "$mins")\n"
 
         else
@@ -192,12 +185,6 @@ process_date() {
     if $printmode; then
         output+="$block"
     fi
-
-    if $breakmode; then
-        echo -n "Press Enter to continue, or q to quit: "
-        read -r key </dev/tty
-        [[ "$key" == "q" ]] && exit 0
-    fi
 }
 
 # -----------------------------
@@ -207,10 +194,12 @@ do_grand_totals() {
     local block="==== GRAND TOTALS ====\n"
 
     for field in "${fields_to_process[@]}"; do
+
         if [[ " ${numeric_fields[*]} " == *" $field "* ]]; then
             total=$(jq -r --arg f "$field" '
                 .[] | .QuarterHourEndTime | to_entries[] | .value[$f]
             ' "$json_file" | jq -s 'add // 0')
+
             total=$(printf "%.2f" "$total")
             block+="$field: $total\n"
 
@@ -221,6 +210,7 @@ do_grand_totals() {
             done < <(jq -r --arg f "$field" '
                 .[] | .QuarterHourEndTime | to_entries[] | .value[$f]
             ' "$json_file")
+
             block+="$field: $(minutes_to_time "$mins")\n"
         fi
     done
@@ -230,16 +220,17 @@ do_grand_totals() {
 }
 
 # -----------------------------
-# EXECUTION
+# Execute
 # -----------------------------
 if $skipmode && [[ -z "$target_date" ]]; then
     do_grand_totals
 else
-    while IFS= read -r d; do
+    # Use for-loop to properly exit
+    for d in $dates; do
         process_date "$d"
-    done < <(printf "%s\n" "$dates")
+    done
 
-    # No grand totals when a specific date is used
+    # Only show grand totals if no specific date was specified
     if ! $skipmode && [[ -z "$target_date" ]]; then
         do_grand_totals
     fi
@@ -250,7 +241,7 @@ fi
 # -----------------------------
 if $printmode; then
     echo -n "Enter store number: "
-    read store </dev/tty
+    read store
 
     fname="Results for $store"
     [[ -n "$fieldname" ]] && fname+=" $fieldname"
@@ -260,5 +251,10 @@ if $printmode; then
     echo -e "$output" > "$fname"
     echo "File created: $fname"
     echo "Press any key to continue..."
-    read -r _ </dev/tty
+    read -r _
 fi
+
+# -----------------------------
+# Exit
+# -----------------------------
+exit 0
