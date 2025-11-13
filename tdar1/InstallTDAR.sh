@@ -1,7 +1,9 @@
 #!/bin/bash
 #
 # tdar (Total DAR)
+# Installer v1.3
 # Installs tdar
+#
 # Creates tdar directory
 	cd
 	mkdir tdar
