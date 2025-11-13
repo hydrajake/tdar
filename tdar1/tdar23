@@ -6,6 +6,7 @@
 # Usage: tdar [-b] <file_name> [fieldname] [date]
 # Written by J.Mock and M.Seifert
 #
+
 # --- Declarations ---
 break_mode=false
 json_file=""
@@ -63,6 +64,13 @@ minutes_to_time() {
     printf "%d:%02d" "$hours" "$minutes"
 }
 
+normalize_date() {
+    local date_input="$1"
+    # Replace . and / with -
+    local normalized=$(echo "$date_input" | sed 's/[./]/-/g')
+    echo "$normalized"
+}
+
 # --- Field lists ---
 numeric_fields=(
     "TotalSales"
@@ -90,16 +98,16 @@ time_fields=(
     "FloorMgmtNeededHours"
 )
 
-# --- Detect whether args are field or date ---
-if [[ "$arg2" =~ ^[0-9./-]{6,10}$ ]]; then
-    target_date="${arg2//[./]/-}"
-elif [[ -n "$arg2" ]]; then
-    fieldname="$arg2"
-fi
-
-if [[ "$arg3" =~ ^[0-9./-]{6,10}$ ]]; then
-    target_date="${arg3//[./]/-}"
-fi
+# --- Determine which arg is date vs field ---
+for arg in "$arg2" "$arg3"; do
+    [[ -z "$arg" ]] && continue
+    normalized_arg=$(normalize_date "$arg")
+    if [[ "$normalized_arg" =~ ^[0-9]{2}-[0-9]{2}-[0-9]{4}$ ]]; then
+        target_date="$normalized_arg"
+    else
+        fieldname="$arg"
+    fi
+done
 
 # --- Select fields to process ---
 if [ -n "$fieldname" ]; then
@@ -108,15 +116,16 @@ else
     fields_to_process=("${numeric_fields[@]}" "${time_fields[@]}")
 fi
 
-# --- Select dates ---
+# --- Read dates into an array ---
 if [ -n "$target_date" ]; then
-    dates="$target_date"
+    date_array=("$target_date")
 else
-    dates=$(jq -r '.[].Date' "$json_file")
+    mapfile -t date_array < <(jq -r '.[].Date' "$json_file")
 fi
 
 # --- Main loop ---
-while IFS= read -r date; do
+for date in "${date_array[@]}"; do
+    [[ -z "$date" ]] && continue
     echo "---- Date: $date ----"
 
     for field in "${fields_to_process[@]}"; do
@@ -146,12 +155,14 @@ while IFS= read -r date; do
         fi
     done
 
-    # --- Break mode pause ---
+    # --- BREAK MODE PAUSE ---
     if [ "$break_mode" = true ]; then
-        echo ""
-        read -p "Press Enter to continue..." _
-        echo ""
+        read -rp "Press Enter to continue, or q to quit: " input < /dev/tty
+        if [[ "$input" =~ ^[Qq]$ ]]; then
+            echo "Exiting break mode."
+            exit 0
+        fi
     fi
 
     echo ""
-done <<< "$dates"
+done
