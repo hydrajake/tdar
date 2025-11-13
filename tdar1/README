@@ -3,10 +3,10 @@
 # 11/13/2025
 # 
 # Format: tdar [-b, -s, or -p] <file_name> [field_name] [date]
-# The -b (by-line), -s (skip), and -p (print-out) options, along with field_name and date, are optional.
+# The -b (by-line), -s (skip), and -p (print-out) flags, along with field_name and date, are optional.
 # file_name is required.
 # file_name must be entered in its entirety.
-# file_name MUST be the first argument or immediately follow the -b option if used.
+# file_name MUST be the first argument or immediately follow any flags used.
 # Date MUST be in the mmddyyyy format.
 #
 # Users can use periods, slashes, or dashes to separate the month, day, and year, as long as it maintains the mmddyyyy structure.
