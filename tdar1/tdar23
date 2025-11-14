@@ -1,9 +1,9 @@
 #!/bin/bash
 # tdar
-# Version 3.1
-# Updated 11/13/2025
-# Totals numeric or time-based fields by date
-# Usage: tdar [-s] [-p] <file_name> [field_name] [date]
+# Version 4.0
+# Updated 11/14/2025
+# Totals numeric or time-based fields by date, with ranges
+# Usage: tdar [-s] [-p] <file_name> [field_name|all] [{start_date:end_date}]
 # Written by J.Mock and M.Seifert
 
 # -----------------------------
@@ -25,25 +25,22 @@ done
 # Required argument: JSON file
 # -----------------------------
 json_file="$1"
-if [ -z "$json_file" ]; then
+if [[ -z "$json_file" ]]; then
     echo "Error: No JSON file specified."
     exit 1
 fi
 shift
 
-if ! [ -f "$json_file" ]; then
+if ! [[ -f "$json_file" ]]; then
     echo "Error: File '$json_file' not found."
     exit 1
 fi
 
 # -----------------------------
-# Detect field and date
+# Detect field and date/range
 # -----------------------------
-arg2="$1"
-arg3="$2"
-
-fieldname=""
-target_date=""
+fieldname="$1"
+daterange="$2"
 
 normalize_date() {
     local d="$1"
@@ -55,23 +52,6 @@ normalize_date() {
         echo ""
     fi
 }
-
-# Decide which argument is date or field
-if [[ -n "$arg2" ]]; then
-    nd=$(normalize_date "$arg2")
-    if [[ -n "$nd" ]]; then
-        target_date="$nd"
-    else
-        fieldname="$arg2"
-    fi
-fi
-
-if [[ -n "$arg3" ]]; then
-    nd=$(normalize_date "$arg3")
-    if [[ -n "$nd" ]]; then
-        target_date="$nd"
-    fi
-fi
 
 # -----------------------------
 # Built-in fields
@@ -102,19 +82,36 @@ time_fields=(
     "FloorMgmtNeededHours"
 )
 
-# Determine which field(s) to process
-fields_to_process=()
-if [[ -n "$fieldname" ]]; then
-    fields_to_process=("$fieldname")
-else
+# Determine fields to process
+if [[ "$fieldname" == "all" || -z "$fieldname" ]]; then
     fields_to_process=("${numeric_fields[@]}" "${time_fields[@]}")
+else
+    fields_to_process=("$fieldname")
 fi
 
-# Determine dates to iterate
-if [[ -n "$target_date" ]]; then
-    dates="$target_date"
+# -----------------------------
+# Generate date list
+# -----------------------------
+target_dates=()
+
+if [[ "$daterange" =~ ^\{(.+):(.+)\}$ ]]; then
+    start_date="${BASH_REMATCH[1]}"
+    end_date="${BASH_REMATCH[2]}"
+    # Convert to YYYY-MM-DD for date arithmetic
+    start_iso=$(date -d "$start_date" +"%Y-%m-%d") || { echo "Invalid start date"; exit 1; }
+    end_iso=$(date -d "$end_date" +"%Y-%m-%d") || { echo "Invalid end date"; exit 1; }
+
+    current="$start_iso"
+    while [[ "$current" < "$end_iso" || "$current" == "$end_iso" ]]; do
+        target_dates+=("$(date -d "$current" +"%m-%d-%Y")")
+        current=$(date -I -d "$current + 1 day") || { echo "Error generating date sequence"; exit 1; }
+    done
+elif [[ -n "$daterange" ]]; then
+    nd=$(normalize_date "$daterange")
+    [[ -n "$nd" ]] && target_dates+=("$nd")
 else
-    dates=$(jq -r '.[].Date' "$json_file")
+    # if no date supplied, use all dates in JSON
+    mapfile -t target_dates < <(jq -r '.[].Date' "$json_file")
 fi
 
 # -----------------------------
@@ -139,15 +136,13 @@ minutes_to_time() {
 output="Reading file...\nTotaling data...\n\n"
 
 # -----------------------------
-# MAIN LOGIC
+# Process a single date
 # -----------------------------
 process_date() {
     local date="$1"
     local block="---- Date: $date ----\n"
 
     for field in "${fields_to_process[@]}"; do
-
-        # numeric fields
         if [[ " ${numeric_fields[*]} " == *" $field "* ]]; then
             total=$(jq -r --arg d "$date" --arg f "$field" '
                 .[] | select(.Date == $d)
@@ -155,23 +150,19 @@ process_date() {
                 | to_entries[]
                 | .value[$f]
             ' "$json_file" | jq -s 'add // 0')
-
             total=$(printf "%.2f" "$total")
             block+="$field: $total\n"
 
-        # time fields
         elif [[ " ${time_fields[*]} " == *" $field "* ]]; then
             mins=0
             while IFS= read -r t; do
-                val=$(time_to_minutes "$t")
-                mins=$((mins + val))
+                mins=$((mins + $(time_to_minutes "$t")))
             done < <(jq -r --arg d "$date" --arg f "$field" '
                 .[] | select(.Date == $d)
                 | .QuarterHourEndTime
                 | to_entries[]
                 | .value[$f]
             ' "$json_file")
-
             block+="$field: $(minutes_to_time "$mins")\n"
 
         else
@@ -181,80 +172,78 @@ process_date() {
 
     block+="\n"
     echo -e "$block"
-
-    if $printmode; then
-        output+="$block"
-    fi
+    [[ "$printmode" == true ]] && output+="$block"
 }
 
 # -----------------------------
-# Skip mode (-s): Only totals
+# Grand totals for selected dates
 # -----------------------------
 do_grand_totals() {
     local block="==== GRAND TOTALS ====\n"
 
     for field in "${fields_to_process[@]}"; do
-
         if [[ " ${numeric_fields[*]} " == *" $field "* ]]; then
-            total=$(jq -r --arg f "$field" '
-                .[] | .QuarterHourEndTime | to_entries[] | .value[$f]
-            ' "$json_file" | jq -s 'add // 0')
-
+            total=0
+            for d in "${target_dates[@]}"; do
+                t=$(jq -r --arg d "$d" --arg f "$field" '
+                    .[] | select(.Date == $d)
+                    | .QuarterHourEndTime
+                    | to_entries[]
+                    | .value[$f]
+                ' "$json_file" | jq -s 'add // 0')
+                total=$(echo "$total + $t" | bc)
+            done
             total=$(printf "%.2f" "$total")
             block+="$field: $total\n"
 
         elif [[ " ${time_fields[*]} " == *" $field "* ]]; then
             mins=0
-            while IFS= read -r t; do
-                mins=$((mins + $(time_to_minutes "$t")))
-            done < <(jq -r --arg f "$field" '
-                .[] | .QuarterHourEndTime | to_entries[] | .value[$f]
-            ' "$json_file")
-
+            for d in "${target_dates[@]}"; do
+                while IFS= read -r t; do
+                    mins=$((mins + $(time_to_minutes "$t")))
+                done < <(jq -r --arg d "$d" --arg f "$field" '
+                    .[] | select(.Date == $d)
+                    | .QuarterHourEndTime
+                    | to_entries[]
+                    | .value[$f]
+                ' "$json_file")
+            done
             block+="$field: $(minutes_to_time "$mins")\n"
         fi
     done
 
     echo -e "$block"
-    output+="$block"
+    [[ "$printmode" == true ]] && output+="$block"
 }
 
 # -----------------------------
 # Execute
 # -----------------------------
-if $skipmode && [[ -z "$target_date" ]]; then
+if [[ "$skipmode" == true ]]; then
     do_grand_totals
 else
-    # Use for-loop to properly exit
-    for d in $dates; do
+    for d in "${target_dates[@]}"; do
         process_date "$d"
     done
-
-    # Only show grand totals if no specific date was specified
-    if ! $skipmode && [[ -z "$target_date" ]]; then
-        do_grand_totals
-    fi
+    do_grand_totals
 fi
 
 # -----------------------------
 # Print-to-file mode (-p)
 # -----------------------------
+# Create file
 if $printmode; then
-    echo -n "Enter store number: "
-    read store
-
-    fname="Results for $store"
-    [[ -n "$fieldname" ]] && fname+=" $fieldname"
-    [[ -n "$target_date" ]] && fname+=" $target_date"
-    fname+=".txt"
-
-    echo -e "$output" > "$fname"
-    echo "File created: $fname"
-    echo "Press any key to continue..."
-    read -r _
+	read -p "Enter output file name: " fname
+	fname+=".txt"
+        if [[ -e "$fname" ]]; then
+ 	read -p "File exists. Overwrite? (y/n): " yn
+       	[[ "$yn" != [Yy] ]] && echo "Aborting." && exit 1
 fi
-
-# -----------------------------
-# Exit
-# -----------------------------
+echo -e "$output" > "$fname"
+sed -i '1,2d' "$fname"
+sed -i '1i ------RESULTS----' "$fname"
+echo "File created: $fname"
+fi
+#
 exit 0
+#
