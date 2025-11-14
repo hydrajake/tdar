@@ -1,6 +1,6 @@
 # Current version
-# v3.1
-# 11/13/2025
+# v4.0
+# 11/14/2025
 # 
 # Format: tdar [-s, or -p] <file_name> [field_name] [date]
 # The -s (skip), and -p (print-out) flags, along with field_name and date, are optional.
@@ -9,37 +9,82 @@
 # file_name MUST be the first argument or immediately follow any flags used.
 # Date MUST be in the mmddyyyy format.
 #
-# Users can use periods, slashes, or dashes to separate the month, day, and year, as long as it maintains the mmddyyyy structure.
-# Valid date examples:
-# 11.13.2025
-# 11-13-2025
-# 11/13/2025
+# Users can use periods, slashes, or dashes to separate the month, day, and year, 
+# as long as it maintains the mmddyyyy structure.
+# Valid single-date examples:
+#   11.13.2025
+#   11-13-2025
+#   11/13/2025
+#
+# --------------------------------------------
+# DATE RANGE FORMAT
+# --------------------------------------------
+#
+# To specify a range of dates, wrap the range in braces:
+#       {mmddyyyy:mmddyyyy}
+#
+# You may use any separator (periods, slashes, or dashes) as long as the structure
+# remains mmddyyyy.
+#
+# Valid examples:
+#   {11.02.2025:11.09.2025}
+#   {11-02-2025:11-09-2025}
+#   {11/02/2025:11/09/2025}
 #
 # --------------------------------------------
 # FLAG OPTIONS
 # --------------------------------------------
 #
-# Use the "-s" flag to skip the detailed per-date listing and only display the complete totals of the file.
+# Use the "-s" flag to skip the detailed per-date listing and only display the 
+# complete totals of the file.
 # Example:
-#	tdar -s <file_name> [field_name] [date]
+#       tdar -s <file_name> [field_name] [date_or_range]
 #
 # Use the "-p" flag to print the results of the command into a text file.
 # Example:
-#	tdar -p <file_name> [field_name] [date]
+#       tdar -p <file_name> [field_name] [date_or_range]
 #
-# When using the "-p" flag, the script will prompt for a store number.
+# When using "-p", the script will prompt the user for a store number.
 # The created file will be named:
-#	"Results for <store_number> [field_name] [date].txt"
+#       "Results for <store_number> [field_name] [date_or_range].txt"
 #
-# The -s and -p flags can be used together.
+# The -s and -p flags may be used together.
+#
+# --------------------------------------------
+# ARGUMENT BEHAVIOR
+# --------------------------------------------
+#
+# field_name is optional.
+#   - If provided, only that field will be totaled.
+#   - If omitted, all fields will be included.
+#
+# date/date_range is optional.
+#   - If provided, tdar shows data ONLY for that day or range.
+#   - If omitted, tdar processes the entire file.
+#
+# Valid order of optional arguments:
+#   <file_name> [field_name] [date_or_range]
 #
 # --------------------------------------------
 # EXAMPLES
 # --------------------------------------------
 #
-#	tdar testDAR.json
-#	tdar testDAR.json TotalSales 10-20-2025
-#	tdar testDAR.json 10-20-2025
-#	tdar -s testDAR.json TotalSales
-#	tdar -p testDAR.json TotalSales 10-20-2025
-# tdar -p  -s testDAR.json TotalSales 10-20-2025
+# Entire file:
+#       tdar testDAR.json
+#
+# Single date:
+#       tdar testDAR.json 10-20-2025
+#       tdar testDAR.json TotalSales 10/20/2025
+#
+# Date range:
+#       tdar testDAR.json {10-20-2025:10-27-2025}
+#       tdar testDAR.json TotalSales {10/20/2025:10/27/2025}
+#
+# Skip totals only:
+#       tdar -s testDAR.json TotalSales
+#
+# Print output to file:
+#       tdar -p testDAR.json TotalSales 10-20-2025
+#
+# Print + skip:
+#       tdar -p -s testDAR.json TotalSales {11/02/2025:11/09/2025}
