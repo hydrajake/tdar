@@ -1,0 +1,22 @@
+_tdar_complete() {
+    local cur fieldsfile fields
+
+    fieldsfile="~/tdar/fieldnames"
+
+    # If the field list file exists, read it
+    if [[ -f "$fieldsfile" ]]; then
+        fields=$(tr '\n' ' ' < "$fieldsfile")
+    else
+        fields=""
+    fi
+
+    cur="${COMP_WORDS[COMP_CWORD]}"
+
+    # Only autocomplete for second argument (field name)
+    if [[ $COMP_CWORD -eq 2 ]]; then
+        COMPREPLY=( $(compgen -W "$fields all" -- "$cur") )
+        return 0
+    fi
+}
+
+complete -F _tdar_complete tdar
