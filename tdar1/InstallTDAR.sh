@@ -23,6 +23,7 @@
 	wget https://raw.githubusercontent.com/hydrajake/tdar/refs/heads/main/tdar1/updar
 	wget https://raw.githubusercontent.com/hydrajake/tdar/refs/heads/main/tdar1/README
 	wget https://raw.githubusercontent.com/hydrajake/tdar/refs/heads/main/tdar1/tdar-acomp
+	wget https://raw.githubusercontent.com/hydrajake/tdar/refs/heads/main/tdar1/fieldnames.txt
 # Makes tdar executable and moves it to /bin
 	sleep 1
 	echo "Finishing up..."
@@ -30,6 +31,9 @@
 	sudo chmod +x updar
 	sudo cp tdar23 /bin/tdar
 	sudo cp updar /bin/updar
+	sudo cp tdar-acomp /etc/bash_completion.d
+	sudo cp fieldnames.txt /etc
+	source /etc/bash_completion.d/tdar-acomp
 	clear
 	echo "tdar installed!"
 	sleep 1
